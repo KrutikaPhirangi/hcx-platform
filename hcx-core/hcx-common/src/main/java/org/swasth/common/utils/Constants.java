@@ -110,6 +110,7 @@ public class Constants {
     public static final String PARTICIPANT_ONBOARD_UPDATE = "/participant/onboard/update";
     public static final String PARTICIPANT_VERIFY_IDENTITY = "/participant/verify/identity";
     public static final String APPLICANT_VERIFY = "/applicant/verify";
+    public static final String API_ACCESS_SECRET_GENERATE = "/api-access/secret/generate";
     public static final String PARTICIPANT = "participant";
     public static final String ORGANISATION = "Organisation";
     public static final String USER = "User";
