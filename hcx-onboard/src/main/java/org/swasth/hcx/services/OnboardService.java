@@ -133,6 +133,8 @@ public class OnboardService extends BaseController {
     @Value("${keycloak.client-id}")
     private String keycloackClientId;
 
+    @Value("${keycloak.api-access-realm}")
+    private String keycloakApiAccessRealm;
     @Value("${endpoint.user-invite}")
     private String userInviteEndpoint;
     @Value("${email.user-invite-sub}")
@@ -1094,22 +1096,22 @@ public class OnboardService extends BaseController {
         mockParticipantDetails.put(PASSWORD, password);
         TimeUnit.SECONDS.sleep(3); // After creating participant, elasticsearch will retrieve data after one second hence added two seconds delay for search API.
         Map<String,Object> registryDetails = getParticipant(PARTICIPANT_CODE,childParticipantCode);
-        setKeycloakPassword(childParticipantCode, password ,registryDetails);
+        ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
+        setKeycloakPassword(password, osOwner.get(0), keycloackParticipantRealm);
         logger.info("created Mock participant for :: parent participant code  : " + parentParticipantCode + " :: child participant code  : " + childParticipantCode);
         return mockParticipantDetails;
     }
 
-    private void setKeycloakPassword(String participantCode, String password , Map<String,Object> registryDetails) throws ClientException {
+    private void setKeycloakPassword(String password, String user, String realm) throws ClientException {
         try {
-            ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
-            RealmResource realmResource = keycloak.realm(keycloackParticipantRealm);
-            UserResource userResource = realmResource.users().get(osOwner.get(0));
+            RealmResource realmResource = keycloak.realm(realm);
+            UserResource userResource = realmResource.users().get(user);
             CredentialRepresentation passwordCred = new CredentialRepresentation();
             passwordCred.setTemporary(false);
             passwordCred.setType(CredentialRepresentation.PASSWORD);
             passwordCred.setValue(password);
             userResource.resetPassword(passwordCred);
-            logger.info("The Keycloak password for the os_owner :" + osOwner.get(0) + " has been successfully updated");
+            logger.info("The Keycloak password for the user :" + user + " has been successfully updated");
         } catch (Exception e) {
             throw new ClientException("Unable to set keycloak password : " + e.getMessage());
         }
@@ -1189,8 +1191,9 @@ public class OnboardService extends BaseController {
     public Response generateAndSetPassword(HttpHeaders headers, String participantCode) throws Exception {
         String password = generateRandomPassword(24);
         Map<String, Object> registryDetails = getParticipant(PARTICIPANT_CODE, participantCode);
-        setKeycloakPassword(participantCode, password, registryDetails);
-        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME),password,(String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Arrays.asList((String) registryDetails.get(PRIMARY_EMAIL)), getUserList(headers, participantCode), new ArrayList<>()));
+        ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
+        setKeycloakPassword(password, osOwner.get(0), keycloackParticipantRealm);
+        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME), password, (String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Collections.singletonList((String) registryDetails.get(PRIMARY_EMAIL)), getUserList(headers, participantCode), new ArrayList<>()));
         return getSuccessResponse();
     }
 
@@ -1247,5 +1250,12 @@ public class OnboardService extends BaseController {
         } else {
             return new ArrayList<>();
         }
+    }
+
+    public Response generateAndSetUserSecret(String userName) throws Exception {
+        String password = generateRandomPassword(24);
+        setKeycloakPassword(password, userName, keycloakApiAccessRealm);
+//        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME), password, (String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Arrays.asList((String) registryDetails.get(PRIMARY_EMAIL)), new ArrayList<>(), new ArrayList<>()));
+        return getSuccessResponse();
     }
 }
