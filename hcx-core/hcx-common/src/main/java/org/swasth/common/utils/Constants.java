@@ -105,6 +105,7 @@ public class Constants {
     public static final String ONBOARD_USER_INVITE = "/onboard/user/invite";
     public static final String ONBOARD_USER_INVITE_ACCEPT = "/onboard/user/invite/accept";
     public static final String ONBOARD_USER_INVITE_REJECT = "/onboard/user/invite/reject";
+    public static final String API_ACCESS_SECRET_GENERATE = "/api-access/secret/generate";
     public static final String PARTICIPANT_VERIFICATION_LINK_SEND = "/participant/verification/link/send";
     public static final String  ONBOARD_APPLICANT_PASSWORD_GENERATE = "/onboard/applicant/password/generate";
     public static final String PARTICIPANT_ONBOARD_UPDATE = "/participant/onboard/update";

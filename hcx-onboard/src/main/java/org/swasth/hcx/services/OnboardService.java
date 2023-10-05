@@ -11,7 +11,9 @@ import org.apache.commons.text.RandomStringGenerator;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,7 @@ import org.swasth.hcx.helpers.EventGenerator;
 import org.swasth.hcx.utils.CertificateUtil;
 import org.swasth.hcx.utils.SlugUtils;
 import org.swasth.kafka.client.IEventService;
+import org.swasth.kafka.client.KafkaClient;
 import org.swasth.postgresql.IDatabaseService;
 
 import javax.annotation.PostConstruct;
@@ -86,6 +89,8 @@ public class OnboardService extends BaseController {
     @Value("${postgres.table.onboard-verification}")
     private String onboardVerificationTable;
 
+    @Value("${postgres.table.api-access-secrets-expiry}")
+    private String apiAccessTable;
     @Value("${postgres.table.onboard-verifier}")
     private String onboardingVerifierTable;
 
@@ -113,7 +118,8 @@ public class OnboardService extends BaseController {
     private String privatekey;
     @Value("${jwt-token.expiry-time}")
     private Long expiryTime;
-
+    @Value("${secret.expiry-time}")
+    private Long secretExpiry;
     @Value("${mock-service.provider.endpoint-url}")
     private String mockProviderEndpointURL;
 
@@ -173,6 +179,8 @@ public class OnboardService extends BaseController {
 
     @Value("${email.failed-identity-sub}")
     private String failedIdentitySub;
+    @Value("${keycloak.api-access-realm}")
+    private String keycloakApiAccessRealm;
 
     @PostConstruct()
     public void init(){
@@ -963,6 +971,14 @@ public class OnboardService extends BaseController {
         return freemarkerService.renderTemplate("verification-status.ftl", model);
     }
 
+    private String apiAccessSecret(String username, String password, String participantCode) throws Exception {
+        Map<String, Object> model = new HashMap<>();
+        model.put("USER_NAME", username);
+        model.put("PARTICIPANT_CODE", participantCode);
+        model.put("PASSWORD", password);
+        return freemarkerService.renderTemplate("api-access-secret.ftl", model);
+    }
+
     private String passwordGenerate(String participantName, String password, String participantCode) throws Exception {
         Map<String, Object> model = new HashMap<>();
         model.put("PARTICIPANT_NAME", participantName);
@@ -1094,16 +1110,16 @@ public class OnboardService extends BaseController {
         mockParticipantDetails.put(PASSWORD, password);
         TimeUnit.SECONDS.sleep(3); // After creating participant, elasticsearch will retrieve data after one second hence added two seconds delay for search API.
         Map<String,Object> registryDetails = getParticipant(PARTICIPANT_CODE,childParticipantCode);
-        setKeycloakPassword(childParticipantCode, password ,registryDetails);
+        ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
+        setKeycloakPassword(password, osOwner.get(0), keycloackParticipantRealm);
         logger.info("created Mock participant for :: parent participant code  : " + parentParticipantCode + " :: child participant code  : " + childParticipantCode);
         return mockParticipantDetails;
     }
 
-    private void setKeycloakPassword(String participantCode, String password , Map<String,Object> registryDetails) throws ClientException {
+    private void setKeycloakPassword(String password, String user, String realm) throws ClientException {
         try {
-            ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
-            RealmResource realmResource = keycloak.realm(keycloackParticipantRealm);
-            UserResource userResource = realmResource.users().get(osOwner.get(0));
+            RealmResource realmResource = keycloak.realm(realm);
+            UserResource userResource = realmResource.users().get(user);
             CredentialRepresentation passwordCred = new CredentialRepresentation();
             passwordCred.setTemporary(false);
             passwordCred.setType(CredentialRepresentation.PASSWORD);
@@ -1111,7 +1127,7 @@ public class OnboardService extends BaseController {
             userResource.resetPassword(passwordCred);
             String userId = userResource.toRepresentation().getId();
             realmResource.users().get(userId).logout();
-            logger.info("The Keycloak password for the os_owner :" + osOwner.get(0) + " has been successfully updated, and their sessions have been invalidated.");
+            logger.info("The Keycloak password for the user :" + user + " has been successfully updated, and their sessions have been invalidated.");
         } catch (Exception e) {
             throw new ClientException("Unable to set keycloak password : " + e.getMessage());
         }
@@ -1191,8 +1207,9 @@ public class OnboardService extends BaseController {
     public Response generateAndSetPassword(HttpHeaders headers, String participantCode) throws Exception {
         String password = generateRandomPassword(24);
         Map<String, Object> registryDetails = getParticipant(PARTICIPANT_CODE, participantCode);
-        setKeycloakPassword(participantCode, password, registryDetails);
-        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME),password,(String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Arrays.asList((String) registryDetails.get(PRIMARY_EMAIL)), getUserList(headers, participantCode), new ArrayList<>()));
+        ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
+        setKeycloakPassword(password, osOwner.get(0), keycloackParticipantRealm);
+        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME), password, (String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Collections.singletonList((String) registryDetails.get(PRIMARY_EMAIL)), getUserList(headers, participantCode), new ArrayList<>()));
         return getSuccessResponse();
     }
 
@@ -1249,5 +1266,20 @@ public class OnboardService extends BaseController {
         } else {
             return new ArrayList<>();
         }
+    }
+    public Response generateAndSetUserSecret(Map<String , Object> requestBody) throws Exception {
+        String password = generateRandomPassword(24);
+        Map<String , Object> participant = getParticipant(PARTICIPANT_CODE, (String) requestBody.get(PARTICIPANT_CODE));
+        String query = String.format("INSERT INTO %s (user_id,participant_code,secret_generation_date,secret_expiry_date)VALUES ('%s','%s',%d,%d);", apiAccessTable, requestBody.get(USER_ID),
+                requestBody.get(PARTICIPANT_CODE), System.currentTimeMillis(), System.currentTimeMillis()+ (secretExpiry * 24 * 60 * 60 * 1000));
+        postgreSQLClient.execute(query);
+        String userName = String.format("%s:%s", requestBody.get(PARTICIPANT_CODE), requestBody.get(USER_ID));
+        RealmResource realmResource = keycloak.realm(keycloakApiAccessRealm);
+        UsersResource usersResource = realmResource.users();
+        List<UserRepresentation> existingUsers = usersResource.search(userName);
+        String userId = existingUsers.get(0).getId();
+        setKeycloakPassword(password, userId, keycloakApiAccessRealm);
+        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(apiAccessSecret(userName, password, (String) participant.get(PARTICIPANT_CODE)), passwordGenerateSub, Arrays.asList((String) participant.get(PRIMARY_EMAIL)), new ArrayList<>(), new ArrayList<>()));
+        return getSuccessResponse();
     }
 }
