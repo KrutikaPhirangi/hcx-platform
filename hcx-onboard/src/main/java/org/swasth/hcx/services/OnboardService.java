@@ -1270,10 +1270,18 @@ public class OnboardService extends BaseController {
     public Response generateAndSetUserSecret(Map<String , Object> requestBody) throws Exception {
         String password = generateRandomPassword(24);
         Map<String , Object> participant = getParticipant(PARTICIPANT_CODE, (String) requestBody.get(PARTICIPANT_CODE));
-        String query = String.format("INSERT INTO %s (user_id,participant_code,secret_generation_date,secret_expiry_date)VALUES ('%s','%s',%d,%d);", apiAccessTable, requestBody.get(USER_ID),
-                requestBody.get(PARTICIPANT_CODE), System.currentTimeMillis(), System.currentTimeMillis()+ (secretExpiry * 24 * 60 * 60 * 1000));
-        postgreSQLClient.execute(query);
+        System.out.println(participant);
         String userName = String.format("%s:%s", requestBody.get(PARTICIPANT_CODE), requestBody.get(USER_ID));
+        String selectQuery = String.format("SELECT * FROM %s WHERE username = '%s';", apiAccessTable, userName);
+        ResultSet resultSet = (ResultSet) postgreSQLClient.executeQuery(selectQuery);
+        if (resultSet.next()) {
+            String query = String.format("UPDATE %s SET secret_generation_date=%d,secret_expiry_date=%d WHERE username='%s';", apiAccessTable, System.currentTimeMillis(), System.currentTimeMillis() + (secretExpiry * 24 * 60 * 60 * 1000), userName);
+            postgreSQLClient.execute(query);
+        } else {
+            String query = String.format("INSERT INTO %s (user_id,participant_code,secret_generation_date,secret_expiry_date,username)VALUES ('%s','%s',%d,%d,'%s');", apiAccessTable, requestBody.get(USER_ID),
+                    requestBody.get(PARTICIPANT_CODE), System.currentTimeMillis(), System.currentTimeMillis() + (secretExpiry * 24 * 60 * 60 * 1000), userName);
+            postgreSQLClient.execute(query);
+        }
         RealmResource realmResource = keycloak.realm(keycloakApiAccessRealm);
         UsersResource usersResource = realmResource.users();
         List<UserRepresentation> existingUsers = usersResource.search(userName);
