@@ -13,15 +13,17 @@ import org.springframework.stereotype.Service;
 import org.swasth.common.exception.ClientException;
 import org.swasth.common.helpers.EventGenerator;
 import org.swasth.kafka.client.KafkaClient;
+import org.swasth.postgresql.IDatabaseService;
 
 import javax.ws.rs.core.Response;
 import java.security.SecureRandom;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.swasth.common.utils.Constants.EMAIL;
+import static org.swasth.common.utils.Constants.*;
 
 @Service
 public class KeycloakApiAccessService {
@@ -45,10 +47,16 @@ public class KeycloakApiAccessService {
     private String emailSub;
     @Value("${kafka.topic.message}")
     private String messageTopic;
+    @Value("${postgres.api-access-secrets-expiry-table}")
+    private String apiAccessTable;
+    @Value("${secret.expiry-time}")
+    private Long secretExpiry;
     @Autowired
     private KafkaClient kafkaClient;
     @Autowired
     protected EventGenerator eventGenerator;
+    @Autowired
+    private IDatabaseService postgreSQLClient;
 
     public void addUserWithParticipant(String email, String participantCode, String name) throws ClientException {
         Response response = null;
@@ -65,6 +73,9 @@ public class KeycloakApiAccessService {
                 response = usersResource.create(user);
                 response.close();
                 if (response.getStatus() == 201) {
+                    String query = String.format("INSERT INTO %s (user_id,participant_code,secret_generation_date,secret_expiry_date,username)VALUES ('%s','%s',%d,%d,'%s');", apiAccessTable, email,
+                            participantCode, System.currentTimeMillis(), System.currentTimeMillis() + (secretExpiry * 24 * 60 * 60 * 1000), userName);
+                    postgreSQLClient.execute(query);
                     String message = userEmailMessage;
                     message = message.replace("NAME", name).replace("USER_ID", email).replace("PASSWORD", password).replace("PARTICIPANT_CODE", participantCode);
                     kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(message, emailSub, List.of(email), new ArrayList<>(), new ArrayList<>()));

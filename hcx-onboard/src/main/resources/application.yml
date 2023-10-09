@@ -106,4 +106,4 @@ endpoint:
   user-invite: ${user_invite_endpoint:/onboarding/user/invite}
 
 secret:
-  expiry-time: ${secret_expiry_time:90}
+  expiry-time: ${secret_expiry_time:1}
