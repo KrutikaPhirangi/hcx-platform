@@ -489,6 +489,7 @@ public class OnboardService extends BaseController {
         headersMap.put(AUTHORIZATION,"Bearer " + token.getToken());
         HttpResponse<String> searchResponse = HttpUtils.post(hcxAPIBasePath + VERSION_PREFIX + USER_SEARCH, requestBody, headersMap);
         RegistryResponse registryResponse = JSONUtils.deserialize(searchResponse.getBody(), RegistryResponse.class);
+        System.out.println("-------------registry response ----------" + registryResponse.getUsers());
         if (registryResponse.getUsers().isEmpty())
             return new ArrayList<>();
         else
@@ -1270,7 +1271,8 @@ public class OnboardService extends BaseController {
 
     private List<String> getUserList(HttpHeaders headers, String participantCode) throws Exception {
         List<Map<String, Object>> userSearch = userSearch(JSONUtils.serialize(Map.of(FILTERS, new HashMap<>())), headers);
-        if (!userSearch.isEmpty() && !userSearch.get(0).isEmpty()) {
+        System.out.println("----------usersearch ---------- "+ userSearch);
+        if (userSearch != null && !userSearch.isEmpty() && !userSearch.get(0).isEmpty()) {
             List<String> emailList = new ArrayList<>();
             for (Map<String, Object> userMap : userSearch) {
                 List<Map<String, Object>> tenantRoles = JSONUtils.deserialize(userMap.get(TENANT_ROLES), ArrayList.class);
