@@ -1,6 +1,9 @@
 package org.swasth.hcx.controllers;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -16,11 +19,17 @@ import static org.swasth.common.utils.Constants.SUCCESSFUL;
 
 
 public class BaseController {
-    protected Environment environment;
+
+    private static final Logger logger = LoggerFactory.getLogger(BaseController.class);
+
     @Autowired
-    protected AuditIndexer indexer;
+    protected Environment env;
+
     @Autowired
-    protected EventGenerator generator;
+    protected AuditIndexer auditIndexer;
+
+    @Autowired
+    protected EventGenerator eventGenerator;
 
     protected Response errorResponse(Response response, ErrorCodes code, Exception e) {
         response.setError(new ResponseError(code, e.getMessage(), e.getCause()));
@@ -33,6 +42,7 @@ public class BaseController {
     }
 
     protected ResponseEntity<Object> exceptionHandler(String email, String action, Response response, Exception e) throws Exception {
+        logger.error("Exception: {} :: Trace: {}", e.getMessage(), ExceptionUtils.getStackTrace(e));
         response.setStatus(FAILED.toUpperCase());
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ErrorCodes errorCode = ErrorCodes.INTERNAL_SERVER_ERROR;
@@ -53,7 +63,7 @@ public class BaseController {
             status = HttpStatus.NOT_FOUND;
         }
         if(StringUtils.isEmpty(email))
-            indexer.createDocument(generator.getOnboardErrorEvent(email, action, new ResponseError(errorCode, e.getMessage(), e.getCause())));
+            auditIndexer.createDocument(eventGenerator.getOnboardErrorEvent(email, action, new ResponseError(errorCode, e.getMessage(), e.getCause())));
         return new ResponseEntity<>(errorResponse(response, errorCode, e), status);
     }
 }
