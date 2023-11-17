@@ -1227,7 +1227,7 @@ public class OnboardService extends BaseController {
         Map<String, Object> registryDetails = getParticipant(PARTICIPANT_CODE, participantCode);
         ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
         setKeycloakPassword(password, osOwner.get(0), keycloackParticipantRealm);
-        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME), password, (String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Collections.singletonList((String) registryDetails.get(PRIMARY_EMAIL)), new ArrayList<>(), new ArrayList<>()));
+        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME), password, (String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Collections.singletonList((String) registryDetails.get(PRIMARY_EMAIL)), getUserList(headers,participantCode), new ArrayList<>()));
         return getSuccessResponse();
     }
 
@@ -1273,7 +1273,7 @@ public class OnboardService extends BaseController {
         if (!userSearch.isEmpty() && !userSearch.get(0).isEmpty()) {
             List<String> emailList = new ArrayList<>();
             for (Map<String, Object> userMap : userSearch) {
-                List<Map<String, Object>> tenantRoles = JSONUtils.deserialize(userMap.get(TENANT_ROLES), ArrayList.class);
+                List<Map<String, Object>> tenantRoles = JSONUtils.deserialize(userMap.getOrDefault(TENANT_ROLES, new ArrayList<>()), ArrayList.class);
                 for (Map<String, Object> tenantMap : tenantRoles) {
                     if (StringUtils.equals((String) tenantMap.get(ROLE), ADMIN) && StringUtils.equals((String) tenantMap.get(PARTICIPANT_CODE), participantCode)) {
                         emailList.add((String) userMap.get(EMAIL));
