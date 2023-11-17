@@ -493,7 +493,6 @@ public class OnboardService extends BaseController {
         headersMap.put(AUTHORIZATION,"Bearer " + token.getToken());
         HttpResponse<String> searchResponse = HttpUtils.post(hcxAPIBasePath + VERSION_PREFIX + USER_SEARCH, requestBody, headersMap);
         RegistryResponse registryResponse = JSONUtils.deserialize(searchResponse.getBody(), RegistryResponse.class);
-        System.out.println("-------------registry response ----------" + registryResponse.getUsers());
         if (registryResponse.getUsers().isEmpty())
             return new ArrayList<>();
         else
@@ -1233,7 +1232,7 @@ public class OnboardService extends BaseController {
         Map<String, Object> registryDetails = getParticipant(PARTICIPANT_CODE, participantCode);
         ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
         setKeycloakPassword(password, osOwner.get(0), keycloackParticipantRealm);
-        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME), password, (String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Collections.singletonList((String) registryDetails.get(PRIMARY_EMAIL)), getUserList(headers, participantCode), new ArrayList<>()));
+        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(passwordGenerate((String) registryDetails.get(PARTICIPANT_NAME), password, (String) registryDetails.get(PRIMARY_EMAIL)), passwordGenerateSub, Collections.singletonList((String) registryDetails.get(PRIMARY_EMAIL)), new ArrayList<>(), new ArrayList<>()));
         return getSuccessResponse();
     }
 
