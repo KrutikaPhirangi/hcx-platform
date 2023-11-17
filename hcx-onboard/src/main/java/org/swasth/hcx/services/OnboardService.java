@@ -334,6 +334,7 @@ public class OnboardService extends BaseController {
         if (!phoneVerified && channel.contains(MOBILE)) {
             shortUrl = hcxURL + "/api/url/" + generateRandomPassword(10);
             longUrl = generateURL(requestBody, PHONE, (String) requestBody.get(PRIMARY_MOBILE)).toString();
+            System.out.println("----------Longurl phone --------" + longUrl);
             String phoneMessage = String.format("Dear %s,\n\nTo verify your mobile number as part of the HCX onboarding process, " + "click on %s and proceed as directed.\n\nLink validity: 7 days.", requestBody.getOrDefault(PARTICIPANT_NAME,"user"), shortUrl);
             kafkaClient.send(messageTopic, SMS, eventGenerator.getSMSMessageEvent(phoneMessage, Arrays.asList((String) requestBody.get(PRIMARY_MOBILE))));
         }
@@ -353,6 +354,7 @@ public class OnboardService extends BaseController {
     }
 
     public String communicationVerify(HttpHeaders headers, Map<String, Object> requestBody) throws Exception {
+        System.out.println("request body ----------" + requestBody);
         boolean emailVerified = false;
         boolean phoneVerified = false;
         int attemptCount = 0;
@@ -411,6 +413,7 @@ public class OnboardService extends BaseController {
                                     emailVerified = true;
                                 }
                             }
+                         System.out.println("communication status ------------" + communicationStatus);
                         updateParticipant(participantCode, headers, communicationStatus);
                         } else if (StringUtils.equals((String) requestBody.get("status"), FAILED)) {
                             communicationStatus = FAILED;
@@ -456,7 +459,7 @@ public class OnboardService extends BaseController {
             identityStatus = resultSet1.getString("status");
         }
         if (communicationStatus.equals(SUCCESSFUL) && identityStatus.equals(ACCEPTED)) {
-            Map<String,Object> requestBody = new HashMap();
+            Map<String,Object> requestBody = new HashMap<>();
             requestBody.put(REGISTRY_STATUS, ACTIVE);
             requestBody.put(PARTICIPANT_CODE, participantDetails.get(PARTICIPANT_CODE));
             HttpResponse<String> httpResponse = HttpUtils.post(hcxAPIBasePath + VERSION_PREFIX + PARTICIPANT_UPDATE, JSONUtils.serialize(requestBody), getHeadersMap(headers));
@@ -472,6 +475,7 @@ public class OnboardService extends BaseController {
     private void updateOtpStatus(boolean emailVerified, boolean phoneVerified, int attemptCount, String status, String code, String comments) throws Exception {
         String updateOtpQuery = String.format("UPDATE %s SET email_verified=%b,phone_verified=%b,status='%s',updatedOn=%d,attempt_count=%d ,comments='%s' WHERE participant_code='%s'",
                 onboardVerificationTable, emailVerified, phoneVerified, status, System.currentTimeMillis(), attemptCount + 1, comments, code);
+        System.out.println("update query -----------"   + updateOtpQuery);
         postgreSQLClient.execute(updateOtpQuery);
     }
 
@@ -868,6 +872,7 @@ public class OnboardService extends BaseController {
 
     private URL generateURL(Map<String, Object> participant, String type, String sub) throws Exception {
         String token = generateToken(sub, type, (String) participant.get(PARTICIPANT_NAME), (String) participant.get(PARTICIPANT_CODE));
+        System.out.println("----------email ----------" + token);
         String url = String.format("%s/onboarding/verify?%s=%s&jwt_token=%s", hcxURL, type, sub, token);
         return new URL(url);
     }
@@ -1270,9 +1275,9 @@ public class OnboardService extends BaseController {
     }
 
     private List<String> getUserList(HttpHeaders headers, String participantCode) throws Exception {
+        System.out.println("--------------it is in getUserList --------------");
         List<Map<String, Object>> userSearch = userSearch(JSONUtils.serialize(Map.of(FILTERS, new HashMap<>())), headers);
-        System.out.println("----------usersearch ---------- "+ userSearch);
-        if (userSearch != null && !userSearch.isEmpty() && !userSearch.get(0).isEmpty()) {
+        if (!userSearch.isEmpty() && !userSearch.get(0).isEmpty()) {
             List<String> emailList = new ArrayList<>();
             for (Map<String, Object> userMap : userSearch) {
                 List<Map<String, Object>> tenantRoles = JSONUtils.deserialize(userMap.get(TENANT_ROLES), ArrayList.class);
@@ -1282,6 +1287,7 @@ public class OnboardService extends BaseController {
                     }
                 }
             }
+            System.out.println("--------emaillist ------------" + emailList);
             return emailList;
         } else {
             return new ArrayList<>();
