@@ -528,17 +528,22 @@ public class OnboardService extends BaseController {
         HttpResponse<String> httpResponse = HttpUtils.post(hcxAPIBasePath + VERSION_PREFIX + PARTICIPANT_UPDATE, JSONUtils.serialize(participant), getHeadersMap(headers));
 
         if (httpResponse.getStatus() == 200) {
+            System.out.println("-----------------------MOCK PARTICIPANT------------------------------");
             if (commStatus.equals(SUCCESSFUL) && identityStatus.equals(ACCEPTED)) {
+                System.out.println("=================START============================");
                 if (mockParticipantAllowedEnv.contains(env)) {
+                    System.out.println("======================ENV DEV==========================");
                     String searchQuery = String.format("SELECT * FROM %s WHERE parent_participant_code = '%s'", mockParticipantsTable, participant.get(PARTICIPANT_CODE));
                     ResultSet result = (ResultSet) postgresClientMockService.executeQuery(searchQuery);
                     if (!result.next()) {
+                        System.out.println("--------------CREATE MOCK PARTICIPANT---------------------------");
                         mockProviderDetails = createMockParticipant(headers, PROVIDER_HOSPITAL, participantDetails);
                         mockPayorDetails = createMockParticipant(headers, PAYOR, participantDetails);
-                    }
-                    if (participantDetails.getOrDefault(STATUS_DB, "").equals(CREATED)) {
                         kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(successTemplate((String) participant.get(PARTICIPANT_NAME), mockProviderDetails, mockPayorDetails), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
                     }
+//                    if (participantDetails.getOrDefault(STATUS_DB, "").equals(CREATED)) {
+//                        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(successTemplate((String) participant.get(PARTICIPANT_NAME), mockProviderDetails, mockPayorDetails), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
+//                    }
                 } else if (participantDetails.getOrDefault(STATUS_DB, "").equals(CREATED)) {
                     kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(pocSuccessTemplate((String) participant.get(PARTICIPANT_NAME)), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
                 }
