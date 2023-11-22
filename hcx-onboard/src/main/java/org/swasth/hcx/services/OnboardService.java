@@ -498,6 +498,7 @@ public class OnboardService extends BaseController {
         Map<String, Object> mockProviderDetails = new HashMap<>();
         Map<String, Object> mockPayorDetails = new HashMap<>();
         Map<String, Object> participant = (Map<String, Object>) requestBody.get(PARTICIPANT);
+        System.out.println(participant);
         Map<String,Object> participantDetails = getParticipant(PARTICIPANT_CODE, (String) participant.get(PARTICIPANT_CODE));
         String email = (String) participantDetails.get(PRIMARY_EMAIL);
         OnboardValidations validations = new OnboardValidations(getConfig((String) participant.get(PARTICIPANT_CODE), PARTICIPANT_VALIDATION_PROPERTIES));
@@ -540,6 +541,7 @@ public class OnboardService extends BaseController {
                         mockProviderDetails = createMockParticipant(headers, PROVIDER_HOSPITAL, participantDetails);
                         mockPayorDetails = createMockParticipant(headers, PAYOR, participantDetails);
                         kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(successTemplate((String) participant.get(PARTICIPANT_NAME), mockProviderDetails, mockPayorDetails), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
+                        System.out.println("-------------------CREATED MOCK PARTICIPANT SUCCESSFULLY---------------------------");
                     }
 //                    if (participantDetails.getOrDefault(STATUS_DB, "").equals(CREATED)) {
 //                        kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(successTemplate((String) participant.get(PARTICIPANT_NAME), mockProviderDetails, mockPayorDetails), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
@@ -934,6 +936,7 @@ public class OnboardService extends BaseController {
 
     private String successTemplate(String participantName, Map<String, Object> mockProviderDetails, Map<String, Object> mockPayorDetails) throws TemplateException, IOException {
         Map<String, Object> model = new HashMap<>();
+        System.out.println(participantName+"----------------------------");
         model.put("USER_NAME", participantName);
         model.put("MOCK_PROVIDER_CODE", mockProviderDetails.getOrDefault(PARTICIPANT_CODE, ""));
         model.put("MOCK_PROVIDER_USER_NAME", mockProviderDetails.getOrDefault(PRIMARY_EMAIL, ""));
