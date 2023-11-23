@@ -545,8 +545,6 @@ public class OnboardService extends BaseController {
                     if (!result.next()) {
                         mockProviderDetails = createMockParticipant(headers, PROVIDER, participantDetails);
                         mockPayorDetails = createMockParticipant(headers, PAYOR, participantDetails);
-                    }
-                    if (participantDetails.getOrDefault("status", "").equals(CREATED)) {
                         kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(successTemplate((String) participant.get(PARTICIPANT_NAME), mockProviderDetails, mockPayorDetails), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
                     }
                 } else if (participantDetails.getOrDefault("status", "").equals(CREATED)) {
