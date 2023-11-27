@@ -186,19 +186,21 @@ public class BaseRequest {
             String entity = getEntity(action);
             validateCondition(!OPERATIONAL_ENTITIES.contains(entity) && action.contains("on_") && ((((List<String>) audit.get(RECIPIENT_ROLE)).contains(PROVIDER)) || ((List<String>) audit.get(RECIPIENT_ROLE)).stream().anyMatch(PROVIDER_SPECIFIC_ROLES::contains)) && audit.get(STATUS).equals(COMPLETE_STATUS), ErrorCodes.ERR_INVALID_CORRELATION_ID, CLOSED_CYCLE_MSG);
         }
-        String actionEntity = getEntity(jweRequest.getApiAction());
-        if (!OPERATIONAL_ENTITIES.contains(actionEntity)) {
-            if (!correlationFilteredData.isEmpty()) {
-                List<Map<String, Object>> filteredList = filteredList(correlationFilteredData, correlationDataCloseDays);
-                // validating correlation id at sender context
-                if (filteredList.isEmpty() && correlationFilteredData.get(0).get(HCX_SENDER_CODE).toString().equals(jweRequest.getHcxSenderCode()) && correlationAuditData.get(0).get(CORRELATION_ID).toString().contains(jweRequest.getCorrelationId())) {
-                    throw new ClientException(ErrorCodes.ERR_INVALID_CORRELATION_ID, CORRELATION_ID_DUPLICATE);
-                }
-            }
-        }
         if (apiAction.contains("on_")) {
             validateCondition(participantCtxAuditData.isEmpty(), ErrorCodes.ERR_INVALID_CORRELATION_ID, INVALID_ON_ACTION);
             validateWorkflowId(participantCtxAuditData.get(0));
+        }
+        String actionEntity = getEntity(jweRequest.getApiAction());
+        if(!apiAction.contains("on_")) {
+            if (!OPERATIONAL_ENTITIES.contains(actionEntity)) {
+                if (!correlationFilteredData.isEmpty()) {
+                    List<Map<String, Object>> filteredList = filteredList(correlationFilteredData, correlationDataCloseDays);
+                    // validating correlation id at sender context
+                    if (filteredList.isEmpty() && correlationFilteredData.get(0).get(HCX_SENDER_CODE).toString().equals(jweRequest.getHcxSenderCode()) && correlationAuditData.get(0).get(CORRELATION_ID).toString().contains(jweRequest.getCorrelationId())) {
+                        throw new ClientException(ErrorCodes.ERR_INVALID_CORRELATION_ID, CORRELATION_ID_DUPLICATE);
+                    }
+                }
+            }
         }
         List<String> senderRoles = (List<String>) senderDetails.get(ROLES);
         List<String> recipientRoles = (List<String>) recipientDetails.get(ROLES);
