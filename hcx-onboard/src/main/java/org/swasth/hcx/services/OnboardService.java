@@ -1216,7 +1216,7 @@ public class OnboardService extends BaseController {
     }
 
     private String generateRandomPassword(int length){
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         return RandomStringUtils.random(length, characters);
     }
 
