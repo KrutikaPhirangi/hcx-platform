@@ -543,7 +543,7 @@ public class OnboardService extends BaseController {
                     String searchQuery = String.format("SELECT * FROM %s WHERE parent_participant_code = '%s'", mockParticipantsTable, participant.get(PARTICIPANT_CODE));
                     ResultSet result = (ResultSet) postgresClientMockService.executeQuery(searchQuery);
                     if (!result.next()) {
-                        mockProviderDetails = createMockParticipant(headers, PROVIDER, participantDetails);
+                        mockProviderDetails = createMockParticipant(headers, PROVIDER_HOSPITAL, participantDetails);
                         mockPayorDetails = createMockParticipant(headers, PAYOR, participantDetails);
                         kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(successTemplate((String) participant.get(PARTICIPANT_NAME), mockProviderDetails, mockPayorDetails), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
                     }
@@ -1100,8 +1100,8 @@ public class OnboardService extends BaseController {
             mockParticipant.put(ENDPOINT_URL, mockPayorEndpointURL);
             getEmailAndName("mock_payor", mockParticipant, participantDetails, "Mock Payor");
         }
-        if (role.equalsIgnoreCase(PROVIDER)) {
-            mockParticipant.put(ROLES, new ArrayList<>(List.of(PROVIDER)));
+        if (role.equalsIgnoreCase(PROVIDER_HOSPITAL)) {
+            mockParticipant.put(ROLES, new ArrayList<>(List.of(PROVIDER_HOSPITAL)));
             mockParticipant.put(ENDPOINT_URL, mockProviderEndpointURL);
             getEmailAndName("mock_provider", mockParticipant, participantDetails, "Mock Provider");
         }
