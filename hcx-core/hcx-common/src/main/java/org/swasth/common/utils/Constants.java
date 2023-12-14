@@ -202,7 +202,7 @@ public class Constants {
     public static final String HEADER_AUDIT = "hcx_audit";
     public static final String PAYOR = "payor";
     public static final String PROVIDER = "provider";
-    public static final String  PROVIDER_HOSPITAL = "provider.hospital";
+    public static final String PROVIDER_HOSPITAL = "provider.hospital";
     public static final String AGENCY_TPA = "agency.tpa";
     public static final String MEMBER_ISNP = "member.isnp";
     public static final String ROLES = "roles";
@@ -348,6 +348,7 @@ public class Constants {
     public static final String OVER_ALL_STATUS = "overallStatus";
     public static final String PARTIAL = "partial";
     public static final String FAILED = "failed";
+    public static final String STATUS_DB = "status";
     public static final String ATTEMPT_COUNT = "attempt_count";
     public static final String REJECTED = "rejected";
     public static final String ACCEPTED = "accepted";
@@ -374,7 +375,7 @@ public class Constants {
    public static final String OTP_REGENERATE_COUNT = "otp_regenerate_count";
    public static final String LAST_REGENERATE_DATE = "last_regenerate_date";
    public static final String RESPONSE_OBJ = "response_obj";
-   public static final List<String> PARTICIPANT_ROLES = Arrays.asList(PROVIDER, PAYOR, AGENCY_TPA, "agency.regulator", "research", MEMBER_ISNP, "agency.sponsor", ADMIN_ROLE, "provider.hospital", "provider.clinic", "provider.practitioner", "provider.diagnostics", "provider.pharmacy");
+   public static final List<String> PARTICIPANT_ROLES = Arrays.asList(PROVIDER,PAYOR,AGENCY_TPA,"agency.regulator", "research",MEMBER_ISNP, "agency.sponsor",ADMIN_ROLE);
    public static final String USER_NAME = "user_name";
    public static final String CREATED_BY = "created_by";
    public static final List<String> ALLOWED_DELEGATED_TOPICS = Arrays.asList("notif-workflow-update");

@@ -57,8 +57,8 @@ public class Participant {
             return "bsp";
         } else if (getRoles().contains("provider")) {
             return "hosp";
-        }
-        return getRoles().get(0);
+        } 
+            return getRoles().get(0);
     }
 
     private String getRandomSeq(){
