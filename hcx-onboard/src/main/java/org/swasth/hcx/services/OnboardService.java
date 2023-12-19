@@ -247,6 +247,7 @@ public class OnboardService extends BaseController {
             if (createResponse.getStatus() != 200) {
             throw new ClientException(response.getError().getCode() == null ? errCode : response.getError().getCode(), response.getError().getMessage());
         }
+        System.out.println("------------------create entity----------------------");
         return (String) JSONUtils.deserialize(createResponse.getBody(), Map.class).get(id);
     }
 
@@ -519,6 +520,7 @@ public class OnboardService extends BaseController {
             phoneVerified = resultSet.getBoolean(PHONE_VERIFIED);
             commStatus = resultSet.getString(STATUS_DB);
         }
+        System.out.println("----------onboard verification--------------------");
         ResultSet resultSet1 = (ResultSet) postgreSQLClient.executeQuery(query(onboardingVerifierTable, (String) participant.get(PARTICIPANT_CODE)));
         if (resultSet1.next()) {
             identityStatus = resultSet1.getString(STATUS_DB);
@@ -528,28 +530,35 @@ public class OnboardService extends BaseController {
         logger.info("Email verification: {} :: Phone verification: {} :: Identity verification: {}", emailVerified, phoneVerified, identityStatus);
 
         if (commStatus.equals(SUCCESSFUL) && identityStatus.equals(ACCEPTED)) {
+            System.out.println(commStatus+"---------------------------------------------"+identityStatus);
             participant.put(REGISTRY_STATUS, ACTIVE);
         }
         if (participant.containsKey(ONBOARD_VALIDATION_PROPERTIES)) {
             participant.remove(ONBOARD_VALIDATION_PROPERTIES);
         }
         HttpResponse<String> httpResponse = HttpUtils.post(hcxAPIBasePath + VERSION_PREFIX + PARTICIPANT_UPDATE, JSONUtils.serialize(participant), getHeadersMap(headers));
-
+        System.out.println("----------------------------------response--------------------");
         if (httpResponse.getStatus() == 200) {
             if (commStatus.equals(SUCCESSFUL) && identityStatus.equals(ACCEPTED)) {
+                System.out.println("------------------------successful-----------------------------");
                 if (mockParticipantAllowedEnv.contains(env)) {
+                    System.out.println("----------------------------------------env---------------------");
                     String searchQuery = String.format("SELECT * FROM %s WHERE parent_participant_code = '%s'", mockParticipantsTable, participant.get(PARTICIPANT_CODE));
                     ResultSet result = (ResultSet) postgresClientMockService.executeQuery(searchQuery);
                     if (!result.next()) {
+                        System.out.println("---------------creating mock -------------------------------");
                         mockProviderDetails = createMockParticipant(headers, PROVIDER_HOSPITAL, participantDetails);
                         mockPayorDetails = createMockParticipant(headers, PAYOR, participantDetails);
+                        System.out.println("------------------sent mail for created mock participant------------");
                         kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(successTemplate((String) participant.get(PARTICIPANT_NAME),  mockProviderDetails.get(), mockPayorDetails.get()), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
                     }
                 } else if (participantDetails.getOrDefault(STATUS_DB, "").equals(CREATED)) {
+                    System.out.println("---------------updated---------------------");
                     kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(pocSuccessTemplate((String) participant.get(PARTICIPANT_NAME)), onboardingSuccessSub, Arrays.asList(email), new ArrayList<>(), new ArrayList<>()));
                 }
             }
             if (!StringUtils.equals((String) participantDetails.get(REGISTRY_STATUS), ACTIVE) && StringUtils.equals((String) participant.getOrDefault(REGISTRY_STATUS, ""), ACTIVE)){
+                System.out.println("--------------------generate password ----------------------------");
                 generateAndSetPassword(headers, (String) participant.get(PARTICIPANT_CODE));
             }
             Response response = new Response(PARTICIPANT_CODE, participant.get(PARTICIPANT_CODE));
@@ -1078,6 +1087,7 @@ public class OnboardService extends BaseController {
                 String privateKey = (String) mockParticipant.getOrDefault(PRIVATE_KEY, "");
                 mockParticipant.remove(PRIVATE_KEY);
                 String childParticipantCode = createEntity(PARTICIPANT_CREATE, JSONUtils.serialize(mockParticipant), getHeadersMap(headers), ErrorCodes.ERR_INVALID_PARTICIPANT_DETAILS, PARTICIPANT_CODE);
+                System.out.println("------------------------------child --------------------"+childParticipantCode);
                 return updateMockDetails(mockParticipant, parentParticipantCode, childParticipantCode, privateKey);
             } catch (Exception e){
                 throw new RuntimeException();
@@ -1109,6 +1119,7 @@ public class OnboardService extends BaseController {
         mockParticipant.put(ENCRYPTION_CERT, certificate.getOrDefault(PUBLIC_KEY, ""));
         mockParticipant.put(PRIVATE_KEY, certificate.getOrDefault(PRIVATE_KEY, ""));
         mockParticipant.put(REGISTRY_STATUS, ACTIVE);
+        System.out.println("===================Mock participant--------------------");
         return mockParticipant;
     }
 
@@ -1125,6 +1136,7 @@ public class OnboardService extends BaseController {
         mockParticipantDetails.put(PASSWORD, password);
         TimeUnit.SECONDS.sleep(3); // After creating participant, elasticsearch will retrieve data after one second hence added two seconds delay for search API.
         Map<String,Object> registryDetails = getParticipant(PARTICIPANT_CODE,childParticipantCode);
+        System.out.println("-----------------------"+registryDetails);
         ArrayList<String> osOwner = (ArrayList<String>) registryDetails.get(OS_OWNER);
         setKeycloakPassword(password, osOwner.get(0), keycloackParticipantRealm);
         logger.info("created Mock participant for :: parent participant code  : {} :: child participant code  : {} " ,parentParticipantCode, childParticipantCode);
