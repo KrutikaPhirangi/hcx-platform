@@ -133,11 +133,15 @@ public class OnboardController extends BaseController {
     @PostMapping(API_ACCESS_SECRET_GENERATE)
     public ResponseEntity<Object> apiAccessSecretGenerate(@RequestBody Map<String, Object> requestBody, @RequestHeader HttpHeaders headers) throws Exception {
         try {
+            System.out.println("----------------API-ACCESS-SECRET--------------------------");
             if(!requestBody.containsKey(USER_ID) || !requestBody.containsKey(PARTICIPANT_CODE)){
+                System.out.println("---------------------USER_ID MISSING----------------------");
                 throw new ClientException("user id or participant code is missing");
             }
+            System.out.println("----------------------GENERATE SECRET-----------------");
             return getSuccessResponse(service.generateAndSetUserSecret(requestBody));
         } catch (Exception e) {
+            System.out.println("----------------------ERROR--------------------------------------");
             return exceptionHandler((String) requestBody.getOrDefault(USER_ID, ""), API_ACCESS_SECRET_GENERATE, new Response(), e);
         }
     }

@@ -1292,18 +1292,25 @@ public class OnboardService extends BaseController {
     public Response generateAndSetUserSecret(Map<String , Object> requestBody) throws Exception {
         String password = generateRandomPassword(24);
         Map<String , Object> participant = getParticipant(PARTICIPANT_CODE, (String) requestBody.get(PARTICIPANT_CODE));
+        System.out.println("------------------------"+participant);
         String userName = String.format("%s:%s", requestBody.get(PARTICIPANT_CODE), requestBody.get(USER_ID));
+        System.out.println("------------------------USERNAME------------------------"+userName);
         String selectQuery = String.format("SELECT * FROM %s WHERE username = '%s';", apiAccessTable, userName);
         ResultSet resultSet = (ResultSet) postgreSQLClient.executeQuery(selectQuery);
+        System.out.println("----------------------RESULT_SET---------------------");
         if (resultSet.next()) {
+            System.out.println("--------------------------UPDATEING---------------");
             String query = String.format("UPDATE %s SET secret_generation_date=%d,secret_expiry_date=%d WHERE username='%s';", apiAccessTable, System.currentTimeMillis(), System.currentTimeMillis() + (secretExpiryDays * 24 * 60 * 60 * 1000), userName);
+            System.out.println("--------------------QUERY-------------------------------");
             postgreSQLClient.execute(query);
         }
+        System.out.println("-----------------KEYCLOAK PASSWORD------------------------------------");
         RealmResource realmResource = keycloak.realm(keycloakApiAccessRealm);
         UsersResource usersResource = realmResource.users();
         List<UserRepresentation> existingUsers = usersResource.search(userName);
         String userId = existingUsers.get(0).getId();
         setKeycloakPassword(password, userId, keycloakApiAccessRealm);
+        System.out.println("----------------------PASSWORD SET----------------------------------");
         kafkaClient.send(messageTopic, EMAIL, eventGenerator.getEmailMessageEvent(apiAccessSecretTemplate((String) requestBody.get(USER_ID), password, (String) participant.get(PARTICIPANT_CODE)), passwordGenerateSub, Arrays.asList((String) requestBody.get(USER_ID)), new ArrayList<>(), new ArrayList<>()));
         return getSuccessResponse();
     }
