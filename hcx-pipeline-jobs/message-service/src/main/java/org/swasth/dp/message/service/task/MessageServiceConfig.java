@@ -47,7 +47,9 @@ public class MessageServiceConfig extends BaseJobConfig {
         emailDispatcherParallelism = config.getInt("task.email.dispatcher.parallelism");
         smsDispatcherParallelism = config.getInt("task.sms.dispatcher.parallelism");
         awsAccessKey = config.getString("aws.access-key");
+        System.out.println(awsAccessKey+ " ----------------------------");
         awsAccessSecret = config.getString("aws.access-secret");
+        System.out.println(awsAccessSecret+ " -----------------------");
         awsRegion = config.getString("aws.region");
         emailId = config.getString("email.id");
         emailPwd = config.getString("email.pwd");
